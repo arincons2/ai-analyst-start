@@ -1,0 +1,156 @@
+table: payments
+schema: public
+description: Logs all payment transactions for subscriptions.
+grain: One row per payment transaction (payment_id is unique).
+primary_key: payment_id
+row_count_observed: 144065   # observation from database investigation
+
+fields:
+  - name: payment_id
+    data_type: integer
+    nullable: false
+    role: entity
+    description: Unique identifier for the payment (primary key).
+  - name: subscription_id
+    data_type: integer
+    nullable: false
+    role: relationship
+    description: Foreign key linking to subscriptions.subscription_id.
+  - name: payment_date
+    data_type: timestamp without time zone
+    nullable: false
+    role: dimension
+    description: Date when the payment was made.
+  - name: amount_usd
+    data_type: numeric(10,2)
+    nullable: false
+    role: measure
+    description: The payment amount in USD.
+  - name: method
+    data_type: character varying(255)
+    nullable: false
+    role: dimension
+    description: The payment method used (e.g., card, paypal).
+
+data_coverage:   # same cutoff documented in all five files
+  data_cutoff: "2026-09-24"
+  cutoff_rule: >-
+    Project default: apply the common cutoff 2026-09-24 to every table, i.e. keep only rows dated
+    before 2026-09-25 00:00 (< TIMESTAMP '2026-09-25'). State the cutoff in answers. If a user
+    explicitly asks for records after 2026-09-24, explain that they fall outside the common
+    project cutoff and ask for confirmation before using them. September 2026 is an incomplete
+    month and is excluded from comparisons of complete calendar months.
+  incomplete_month: "September 2026 is incomplete (data ends 2026-09-24); exclude it from closed-month comparisons."
+  note: "Payments in the live database end 2026-09-24 (last payment 2026-09-24 23:51:30); September 2026 is incomplete."
+
+relationships:
+  - name: payments_to_subscriptions
+    type: many_to_one   # a subscription has zero or many payments
+    from: payments.subscription_id
+    to: subscriptions.subscription_id
+    note: >-
+      Verified: every payment references an existing subscription (no
+      orphans). A subscription can have many payments; only 11,696 distinct
+      subscriptions have payments, so do not assume one payment per
+      subscription or that every subscription has payments.
+  - name: payments_to_users
+    type: indirect
+    path: payments.subscription_id -> subscriptions.subscription_id, subscriptions.user_id -> users.user_id
+    note: There is no user_id column in payments; join through subscriptions.
+
+measures:
+  - name: payment_count
+    description: Number of payment transactions.
+    formula: COUNT(payment_id)
+  - name: total_amount_usd
+    description: Sum of recorded payment amounts in USD (recorded gross payment amounts, not net revenue; the schema has no refund or payment-status field).
+    formula: SUM(amount_usd)
+  - name: recorded_payment_amount
+    description: >-
+      Sum of amount_usd over payments rows ("payment collections" as recorded).
+      The schema has no payment-status or refund column, so the rule is: every
+      row is included, with no status filter. NOT official accounting revenue.
+    formula: SUM(amount_usd)
+  - name: average_payment_usd
+    description: Average amount per payment transaction.
+    formula: AVG(amount_usd)
+
+derived_dimensions:
+  - name: payment_month
+    description: Calendar month of the payment.
+    formula: DATE_TRUNC('month', payment_date)::date
+
+price_validation:   # monthly-plan price change
+  type: inferred_conclusion   # effective date inferred from transaction data; verified against the live database
+  source_note: >-
+    Verified with read-only queries on the live database (payments joined to
+    subscriptions on subscription_id, plan = 'monthly'). An earlier check on
+    the Week 1 CSV export gave the same pattern.
+  verified_on_live_database:
+    - "Monthly-plan payments: 137,836 rows. Before 2026-03-01: 100,452 rows, all amount_usd = 10.00 (first payment 2022-01-12, last 2026-02-28 23:40:38). On/after 2026-03-01: 37,384 rows, all amount_usd = 12.00 (first 2026-03-01 00:00:00, last 2026-09-24 23:51:30)."
+    - "Exceptions: 0 payments of $10 on/after 2026-03-01; 0 payments of $12 before it; 0 amounts other than $10 or $12."
+    - "Day-by-day 2026-02-20 to 2026-03-10: only $10 up to 2026-02-28 and only $12 from 2026-03-01 (about 125-175 payments per day on both sides); no overlapping prices."
+  observations:
+    - "Annual-plan payments: 6,229 on the live database, all 100.00."
+    - "No discounts, prorations or adjustments are visible: monthly payments have only one amount per period."
+    - "Normal transition: many monthly subscribers paid $10 in February and $12 in March; no single payment date has both prices."
+  inferred_conclusion: >-
+    The monthly-plan price increase from $10 to $12 took effect on 2026-03-01,
+    inferred from payment records. It is NOT confirmed by a company
+    announcement or policy document.
+  limitations:
+    - "Payments show when the new price was billed, not when subscribers were told about it."
+
+unresolved_definitions:
+  - name: revenue
+    status: UNRESOLVED
+    note: >-
+      No authoritative definition. amount_usd sums are recorded gross payment
+      amounts (recorded_payment_amount) and must not be called revenue.
+  - name: MRR
+    status: UNRESOLVED
+    note: No authoritative definition; do not derive it without user confirmation.
+  - name: annual_plan_amounts
+    status: VERIFIED on the live database (observed pattern, not a guaranteed pricing rule).
+    observed_live: "6,229 annual-plan payments, all amount_usd = 100.00 (one distinct value). 137,836 monthly + 6,229 annual = 144,065 total payments."
+
+limitations:
+  - The 2026-03-01 price-increase date is inferred from transaction data; no payment status or refunds exist to rule out other adjustments.
+  - The schema has no refund, failure or currency-conversion fields; amounts are treated as recorded.
+  - amount_usd values are recorded gross payment amounts. Do not describe totals as net revenue or recurring revenue; refunds and payment statuses are not available.
+
+examples:
+  - question: What was the total payment amount and number of payments each month, by payment method?
+    sql: |
+      SELECT
+        DATE_TRUNC('month', payment_date)::date AS payment_month,
+        method,
+        COUNT(payment_id)                       AS payment_count,
+        SUM(amount_usd)                         AS total_amount_usd
+      FROM payments
+      WHERE payment_date < TIMESTAMP '2026-09-25'   -- common data cutoff (2026-09-24)
+      GROUP BY 1, 2
+      ORDER BY 1, 2;
+    explanation: >-
+      Aggregates payments by calendar month and payment method. Useful for
+      seeing how payment volume and amounts are split across methods over time.
+  - question: Do monthly-plan payment amounts change consistently from $10 to $12 on 2026-03-01 (any exceptions)?
+    sql: |
+      SELECT
+        DATE_TRUNC('month', p.payment_date)::date AS payment_month,
+        p.amount_usd,
+        COUNT(*)                                  AS payment_count,
+        MIN(p.payment_date)                       AS first_payment,
+        MAX(p.payment_date)                       AS last_payment,
+        (   (p.payment_date <  TIMESTAMP '2026-03-01' AND p.amount_usd <> 10)
+         OR (p.payment_date >= TIMESTAMP '2026-03-01' AND p.amount_usd <> 12)) AS is_exception
+      FROM payments p
+      JOIN subscriptions s ON s.subscription_id = p.subscription_id
+      WHERE s.plan = 'monthly'
+      GROUP BY 1, 2, 6
+      ORDER BY 1, 2;
+    explanation: >-
+      Lists monthly-plan payment amounts by month and flags any amount that
+      deviates from $10 before or $12 from 2026-03-01. Confirmed on the live
+      database: no exceptions (see price_validation).
+      Latest month (September 2026) is incomplete.

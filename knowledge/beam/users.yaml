@@ -1,0 +1,95 @@
+table: users
+schema: public
+description: >-
+  Stores information about individual users. Reference table for all
+  user-level analysis. Country and device_type are signup attributes only.
+grain: One row per user (user_id is unique).
+primary_key: user_id
+row_count_observed: 31165   # observation from database investigation
+
+fields:
+  - name: user_id
+    data_type: integer
+    nullable: false
+    role: entity
+    description: Unique identifier for the user (primary key).
+  - name: signup_date
+    data_type: timestamp without time zone
+    nullable: false
+    role: dimension
+    description: Date and time when the user signed up.
+  - name: country
+    data_type: character varying(255)
+    nullable: false
+    role: dimension
+    description: >-
+      User's country, based on IP geolocation during signup. Records the
+      signup value only; it is not known to change historically.
+  - name: device_type
+    data_type: character varying(255)
+    nullable: false
+    role: dimension
+    description: >-
+      Type of device used for signing up (e.g., iOS, Android, Web). Records the
+      signup value only.
+
+data_coverage:   # same cutoff documented in all five files
+  data_cutoff: "2026-09-24"
+  cutoff_rule: >-
+    Project default: apply the common cutoff 2026-09-24 to every table, i.e. keep only rows dated
+    before 2026-09-25 00:00 (< TIMESTAMP '2026-09-25'). State the cutoff in answers. If a user
+    explicitly asks for records after 2026-09-24, explain that they fall outside the common
+    project cutoff and ask for confirmation before using them. September 2026 is an incomplete
+    month and is excluded from comparisons of complete calendar months.
+  incomplete_month: "September 2026 is incomplete (data ends 2026-09-24); exclude it from closed-month comparisons."
+  note: "Signups after the cutoff are not covered; the latest signup month is incomplete."
+
+relationships:
+  - name: users_to_subscriptions
+    type: zero_or_one   # a user has at most one subscription row (subscriptions.user_id is unique, verified)
+    from: users.user_id
+    to: subscriptions.user_id
+    note: >-
+      Not every user has a subscription (31,165 users vs 30,747 subscriptions).
+      Every subscription references an existing user (verified, no orphans).
+  - name: users_to_sessions
+    type: zero_or_many   # a user may have no sessions
+    from: users.user_id
+    to: sessions.user_id
+    note: 29,568 distinct users have recorded sessions. No orphan sessions.
+  - name: users_to_trials
+    type: zero_or_one   # a user has at most one trial (each user appears once in trials, verified)
+    from: users.user_id
+    to: trials.user_id
+    note: Only 2,073 users have a trial. No orphan trials.
+
+measures:
+  - name: new_users
+    description: Number of users who signed up in the analysis period.
+    formula: COUNT(user_id)
+    filter_by: signup_date
+
+derived_dimensions:
+  - name: signup_month
+    description: Calendar month of signup.
+    formula: DATE_TRUNC('month', signup_date)::date
+
+limitations:
+  - The latest signup month (September 2026) is incomplete.
+  - Country and device_type are signup attributes; the schema stores no history of changes.
+
+examples:
+  - question: How many new users registered each month, by country?
+    sql: |
+      SELECT
+        DATE_TRUNC('month', signup_date)::date AS signup_month,
+        country,
+        COUNT(user_id)                         AS new_users
+      FROM users
+      WHERE signup_date < TIMESTAMP '2026-09-25'   -- common data cutoff (2026-09-24)
+      GROUP BY 1, 2
+      ORDER BY 1, 2;
+    explanation: >-
+      Groups users by signup month and signup country and counts them. Useful
+      for tracking acquisition trends and which markets are growing. Note that
+      the latest month (September 2026, data ends 2026-09-24) is incomplete.

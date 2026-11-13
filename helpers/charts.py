@@ -16,6 +16,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
 
 # Gray for context, one accent color for the thing the reader should see.
 GRAY = "#B0B0B0"
@@ -45,11 +46,14 @@ def _style(ax, title: str, ylabel: str | None, source: str | None) -> None:
 
 def bar(
     categories, values, title, highlight=None, ylabel=None, source=None,
-    horizontal=False,
+    horizontal=False, value_fmt="{:,.0f}",
 ) -> Figure:
     """Return a bar chart with the `highlight` categories in color and the rest gray.
 
     Use it to compare a value across groups; set horizontal=True for long names.
+    `value_fmt` is a str.format pattern for the labels on the bars. The default keeps whole
+    numbers; pass "{:.1%}" to show a proportion such as 0.043 as 4.3%. Only the label changes,
+    never the plotted values.
     """
     fig, ax = plt.subplots(figsize=(8, 5))
     focus = _as_list(highlight)
@@ -62,18 +66,21 @@ def bar(
     else:
         bars = ax.bar(labels, values, color=colors)
     # Values sit on the bars, so the reader does not have to read an axis.
-    ax.bar_label(bars, fmt="{:,.0f}", padding=3, color=TEXT)
+    ax.bar_label(bars, fmt=value_fmt, padding=3, color=TEXT)
     _style(ax, title, ylabel, source)
     fig.tight_layout()
     return fig
 
 
 def line(
-    x, series: dict[str, Sequence], title, highlight=None, ylabel=None, source=None
+    x, series: dict[str, Sequence], title, highlight=None, ylabel=None, source=None,
+    value_fmt=None,
 ) -> Figure:
     """Return a line chart with one line per entry in `series`, named at its end.
 
     Use it for trends over time; pass the lines to color in `highlight`.
+    `value_fmt` is an optional str.format pattern for the y axis ticks, for example "{:.0%}"
+    for rates. It changes only how the ticks read, never the plotted values.
     """
     fig, ax = plt.subplots(figsize=(9, 5))
     focus = _as_list(highlight)
@@ -87,6 +94,8 @@ def line(
             name, xy=(x[-1], ys[-1]), xytext=(5, 0), textcoords="offset points",
             va="center", color=color, fontweight="bold" if name in focus else None,
         )
+    if value_fmt:
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _pos: value_fmt.format(v)))
     _style(ax, title, ylabel, source)
     fig.tight_layout()
     return fig

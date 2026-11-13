@@ -1,0 +1,120 @@
+table: sessions
+schema: public
+description: Records user activity sessions (user activity and duration).
+grain: One row per session (session_id is unique).
+primary_key: session_id
+row_count_observed: 4335470   # observation from database investigation
+
+fields:
+  - name: session_id
+    data_type: integer
+    nullable: false
+    role: entity
+    description: Unique identifier for the session (primary key).
+  - name: user_id
+    data_type: integer
+    nullable: false
+    role: relationship
+    description: Foreign key linking to users.user_id.
+  - name: session_date
+    data_type: timestamp without time zone
+    nullable: false
+    role: dimension
+    description: Date and time when the session occurred.
+  - name: duration_minutes
+    data_type: integer
+    nullable: false
+    role: measure
+    description: Duration of the session in minutes.
+  - name: activity_type
+    data_type: character varying(255)
+    nullable: false
+    role: dimension
+    description: The main activity performed during the session (e.g., browse, listen, read).
+
+data_coverage:   # same cutoff documented in all five files
+  data_cutoff: "2026-09-24"
+  cutoff_rule: >-
+    Project default: apply the common cutoff 2026-09-24 to every table, i.e. keep only rows dated
+    before 2026-09-25 00:00 (< TIMESTAMP '2026-09-25'). State the cutoff in answers. If a user
+    explicitly asks for records after 2026-09-24, explain that they fall outside the common
+    project cutoff and ask for confirmation before using them. September 2026 is an incomplete
+    month and is excluded from comparisons of complete calendar months.
+  incomplete_month: "September 2026 is incomplete (data ends 2026-09-24); exclude it from closed-month comparisons."
+  note: "Verified on the live database: the latest session is 2026-09-26, two days past the common 2026-09-24 cutoff. Sessions after 2026-09-24 are EXCLUDED by default."
+
+relationships:
+  - name: sessions_to_users
+    type: many_to_one   # a user has zero or many sessions
+    from: sessions.user_id
+    to: users.user_id
+    note: >-
+      Verified: every session references an existing user (no orphans).
+      29,568 distinct users have recorded sessions, so some users have none.
+
+measures:
+  - name: session_count
+    description: Number of sessions.
+    formula: COUNT(session_id)
+  - name: active_users
+    description: Number of distinct users with at least one session in the period.
+    formula: COUNT(DISTINCT user_id)
+  - name: total_minutes
+    description: Total session minutes.
+    formula: SUM(duration_minutes)
+  - name: avg_session_minutes
+    description: Average duration per session in minutes.
+    formula: AVG(duration_minutes)
+
+derived_dimensions:
+  - name: session_month
+    description: Calendar month of the session.
+    formula: DATE_TRUNC('month', session_date)::date
+
+unresolved:
+  - id: activity_type_values
+    status: VERIFIED on the live database (observed values, not a guaranteed closed list)
+    values:
+      - {value: browse, sessions: 2597635, users: 29453}
+      - {value: listen, sessions: 1306227, users: 29157}
+      - {value: read,   sessions: 431608,  users: 27730}
+    checks: >-
+      3 distinct values; 0 NULL and 0 empty values. The counts sum to 4,335,470
+      sessions. Values are lowercase in the data. New values could appear in
+      future data.
+  - id: official_active_user
+    status: UNRESOLVED
+    note: No official definition of an active user is documented.
+
+operational_definitions:   # session-based, NOT official Beam business metrics
+  requires_user_acceptance: >-
+    Because no official active-user definition exists, ask the user whether
+    they accept these operational definitions before calculating, and label
+    results as session-based operational metrics, not official Beam active-user
+    metrics. If the user asks for official active-user figures, ask for clarification.
+  cutoff: Apply the default cutoff (session_date < TIMESTAMP '2026-09-25') and state it with the results.
+  dau: COUNT(DISTINCT user_id) of sessions on a given calendar date (session_date::date)
+  mau: "COUNT(DISTINCT user_id) of sessions in a given calendar month (DATE_TRUNC('month', session_date))"
+
+limitations:
+  - Large table (about 4.3M rows); filter by session_date when possible.
+  - activity_type currently has exactly three observed values (browse, listen, read); do not assume others exist.
+  - Sessions extend to 2026-09-26, past the 2026-09-24 data cutoff used elsewhere; apply the cutoff consistently by default (decision: sessions after 2026-09-24 are excluded; explicit requests to use them require user confirmation).
+
+examples:
+  - question: How many sessions were recorded each month and what was the average session duration, by activity type?
+    sql: |
+      SELECT
+        DATE_TRUNC('month', session_date)::date AS session_month,
+        activity_type,
+        COUNT(session_id)                       AS session_count,
+        COUNT(DISTINCT user_id)                 AS active_users,
+        ROUND(AVG(duration_minutes), 2)         AS avg_duration_minutes
+      FROM sessions
+      WHERE session_date < TIMESTAMP '2026-09-25'   -- common data cutoff (2026-09-24)
+      GROUP BY 1, 2
+      ORDER BY 1, 2;
+    explanation: >-
+      Summarises monthly engagement per activity type: session volume, distinct
+      users and average duration. Useful for spotting shifts in how users spend
+      time in the product. The latest month (September 2026) is incomplete.

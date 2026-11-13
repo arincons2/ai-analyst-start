@@ -1,0 +1,341 @@
+table: subscriptions
+schema: public
+description: >-
+  Tracks user subscriptions to different plans. Central table for retention and
+  churn analysis.
+grain: One row per user (subscription_id and user_id are both unique). There is no plan-change history.
+primary_key: subscription_id
+row_count_observed: 30747   # observation from database investigation
+
+fields:
+  - name: subscription_id
+    data_type: integer
+    nullable: false
+    role: entity
+    description: Unique identifier for the subscription (primary key).
+  - name: user_id
+    data_type: integer
+    nullable: false
+    role: relationship
+    description: Foreign key linking to users.user_id. Unique in this table (one subscription row per user).
+  - name: plan
+    data_type: character varying(255)
+    nullable: false
+    role: dimension
+    description: >-
+      Subscription plan. Observed values: annual, monthly, free. Monthly and
+      annual are paid plans; free is excluded from paid churn. Only one plan
+      per user is stored (no history of plan changes).
+  - name: start_date
+    data_type: timestamp without time zone
+    nullable: false
+    role: dimension
+    description: Date when the subscription started. 1,549 subscriptions start after the 2026-09-24 data cutoff.
+  - name: end_date
+    data_type: timestamp without time zone
+    nullable: true
+    role: dimension
+    description: >-
+      Date when the subscription ended (if applicable). NULL for active
+      subscriptions. It is NOT necessarily the date a cancellation was
+      requested, and not every non-NULL end_date is a cancellation request.
+      162 canceled subscriptions have an end_date after the 2026-09-24 cutoff.
+  - name: status
+    data_type: character varying(255)
+    nullable: false
+    role: dimension
+    description: >-
+      Current status. Observed values: active, canceled, expired. Active has
+      NULL end_date; canceled has non-NULL end_date (some in the future
+      relative to the cutoff); expired has end_date on or before the cutoff.
+      Do not use status as the primary source for churn; use end_date.
+
+data_coverage:   # same cutoff documented in all five files
+  data_cutoff: "2026-09-24"
+  cutoff_rule: >-
+    Project default: apply the common cutoff 2026-09-24 to every table, i.e. keep only rows dated
+    before 2026-09-25 00:00 (< TIMESTAMP '2026-09-25'). State the cutoff in answers. If a user
+    explicitly asks for records after 2026-09-24, explain that they fall outside the common
+    project cutoff and ask for confirmation before using them. September 2026 is an incomplete
+    month and is excluded from comparisons of complete calendar months.
+  incomplete_month: "September 2026 is incomplete (data ends 2026-09-24); exclude it from closed-month comparisons."
+  note: "September 2026 must not be used in closed-month churn comparisons."
+
+relationships:
+  - name: subscriptions_to_users
+    type: many_to_one   # each subscription has exactly one user; a user has zero or one subscription (user_id is unique)
+    from: subscriptions.user_id
+    to: users.user_id
+    note: "Verified - every subscription references an existing user (no orphans)."
+  - name: subscriptions_to_payments
+    type: zero_or_many   # a subscription may have no payments
+    from: subscriptions.subscription_id
+    to: payments.subscription_id
+    note: Only 11,696 subscriptions have payments.
+
+business_rules:   # Week 1 decisions (business definitions), not database facts
+  data_cutoff: "2026-09-24"
+  closed_months_window: "January-August 2026 are complete; September 2026 is incomplete and must be excluded."
+  retention_metric: >-
+    Monthly churn rate = percentage of paid subscribers active at the beginning
+    of the month who end their subscription during that month.
+  comparison: Monthly plan subscribers vs annual plan subscribers (comparison group, price unchanged).
+  pre_period: "September 2025 - February 2026 (6 closed months)."
+  post_period: >-
+    March - August 2026 (6 closed months). Equal-length windows are required.
+    March 2026 is treated as the first post-increase month, based on the
+    INFERRED effective date of 2026-03-01 (see inferred_conclusions).
+  price_increase_date: >-
+    2026-03-01 (INFERRED from payment records; not an independently confirmed
+    company announcement or policy date). Verified against the live payments
+    table: no exceptions, no overlap (see payments.yaml price_validation).
+  active_base_rule: >-
+    A paid subscription is in the active base at month start only if
+    start_date < month_start AND (end_date IS NULL OR end_date >= month_start).
+    A subscription with an end_date before month_start (canceled or expired)
+    is NOT in the base, so an expired subscription never remains in the active
+    base after its end_date.
+  churn_analytical_convention:   # analytical convention, NOT an officially confirmed Beam definition
+    primary: >-
+      Total paid-subscription ending rate (monthly and annual plans, any status)
+      is the primary measure for the March 2026 price-increase analysis. Basis:
+      every ended subscription has an end_date, free plans never end, and the
+      status label changed on 2026-08-01 (see status_label_change).
+    secondary: >-
+      Cancellation-only rate (status = 'canceled') is kept as a separate
+      measure. It is zero before 2026-08-01 and must not be used for
+      pre/post-increase comparisons.
+    denominator: >-
+      Paid subscriptions with start_date < month_start AND (end_date IS NULL OR
+      end_date >= month_start).
+    numerator: >-
+      The same subscriptions with end_date >= month_start AND end_date <
+      month_start + INTERVAL '1 month'.
+    first_day_rule: >-
+      An end_date of exactly month_start 00:00:00 belongs to that month: the
+      subscription is in that month's denominator and numerator, and not in the
+      previous month's (the previous month requires end_date < its next month
+      start). In the Week 1 export, 87 of 3,719 endings are exactly midnight on
+      the 1st (70 expired, 17 canceled).
+    date_boundaries: "Closed months only; September 2026 is excluded (data cutoff 2026-09-24)."
+  status_label_change:
+    status: >-
+      VERIFIED on the live database (status counts: active 27,028, canceled 790,
+      expired 2,929; per-status end_date ranges and month-by-status table).
+    sources:
+      - "Course-provided subscriptions.yaml sample (Prompts_Generation_ofSemanticLayer.txt, status field; also Prompts_Generation_ofSchema.txt, Part1 and Part2 .docx)."
+      - "Live status counts in Part1_Development_ofSchema.docx."
+    statement: >-
+      The recorded status label for ended subscriptions changed from
+      'expired' to 'canceled' for end dates from 2026-08-01 on.
+    evidence_live: >-
+      expired: end_date 2022-03-07 to 2026-07-31 16:28:21 (2,929 rows);
+      canceled: end_date 2026-08-01 to 2026-11-11 18:47:46 (790 rows). No
+      expired on/after 2026-08-01, no canceled before it, and no calendar
+      month has both labels.
+    distinction: >-
+      status is a recorded label; the ending event is end_date. The label
+      change is a data-label change, not evidence of a change in customer
+      behaviour.
+    consequence: >-
+      Before August 2026 there are zero 'canceled' rows, so the canceled-only
+      measure is 0 for January-July 2026 and is NOT comparable across the
+      pre/post-increase windows. This does not establish whether expired
+      endings are churn.
+  future_end_dates: >-
+    For historical calculations as of the cutoff, subscriptions with end_date
+    after the analysis period must not be counted as churned before that date.
+  verified_facts:
+    - "Active subscriptions have NULL end_date."
+    - "162 canceled subscriptions have end_date after 2026-09-24."
+    - "1,549 subscriptions start after 2026-09-24."
+    - "There is no cancellation-request date and no plan-change history."
+  inferred_conclusions:
+    - id: monthly_price_increase_effective_date
+      conclusion: >-
+        The monthly-plan price increase ($10 to $12) took effect on 2026-03-01.
+      basis: >-
+        Payments joined to subscriptions (plan = 'monthly'): every monthly
+        payment before 2026-03-01 is $10.00 and every one on or after is
+        $12.00. Last $10 payment 2026-02-28; first $12 payment 2026-03-01. No
+        exceptional amounts, no overlap (verified on the live database). See payments.yaml price_validation.
+      confidence: >-
+        Strong as a transaction-level working date. NOT confirmed by a
+        company announcement. Caveat: payments reflect billing, and
+        subscribers' awareness or notice of the increase (which could affect
+        behaviour earlier) is not observable in the data.
+      effect_on_churn_analysis: >-
+        The first month in which churn can reflect the new price is March 2026
+        (end_date is not a cancellation-request date, so churn that reflects a
+        reaction to the price may be recorded later still).
+  assumptions:
+    - "March 2026 is analysed as the first post-increase month because of the inferred 2026-03-01 date."
+    - "Tenure is measured from start_date to the beginning of the analysis period."
+
+unresolved_business_questions:
+  - id: official_churn_definition
+    question: >-
+      What is Beam's official definition of churn: every paid subscription
+      ending (canceled and expired), or only status = 'canceled'? Both
+      statuses have a non-NULL end_date and the data does not establish why a
+      subscription ended.
+    status: UNRESOLVED
+    handling: >-
+      Cancellation rate (canceled-only) and total paid-subscription ending
+      rate (all endings) are kept as separate measures; neither is declared
+      official. See business_rules.status_label_change: canceled-only is not
+      comparable across 2026-08-01.
+      Two measures are provided, neither declared official.
+      paid_churned_subscriptions counts all paid subscriptions ending in the
+      month regardless of status. paid_churned_subscriptions_canceled_only
+      counts those ending in the month with status = 'canceled'. The
+      canceled-only measure must NOT be described as voluntary churn: the
+      reason for cancellation is not recorded. Both use the same denominator
+      (paid subscriptions active at month start).
+  - id: subscriber_today
+    question: >-
+      What counts as a subscriber 'today' (2026-11-10)? The data ends 2026-09-24,
+      so the actual current number is unknown.
+    status: UNRESOLVED
+    handling: >-
+      Never claim a current subscriber count. Use the expression 'subscribers
+      as of the latest available data cutoff' and the operational definition in
+      measures.subscribers_as_of_cutoff. Whether free subscriptions count as
+      subscribers is unresolved; report by plan.
+
+measures:
+  - name: subscribers_as_of_cutoff
+    description: >-
+      OPERATIONAL definition of subscribers as of the latest available data
+      cutoff (not 'today'). Report by plan; whether free counts is unresolved.
+    formula: >-
+      COUNT(*) WHERE start_date < DATE '2026-09-25' AND (end_date IS NULL OR
+      end_date >= DATE '2026-09-25')
+    evidence: >-
+      VERIFIED on the live database (read-only query, grouped by plan):
+      annual 2,790; monthly 5,584; free 17,267; total 25,641 (8,374 paid).
+      The Week 1 export gave identical numbers.
+    limitations:
+      - "162 canceled subscriptions have end_date after the cutoff; status = 'active' would miss them."
+      - "An end_date after the cutoff may be a scheduled ending; no cancellation-request date exists."
+      - "1,549 subscriptions (582 paid) start after the cutoff and are excluded."
+      - "Cannot describe the position on 2026-11-10."
+  - name: active_paid_at_month_start
+    description: >-
+      Paid subscriptions (monthly or annual) active at the beginning of a
+      month. Denominator for both churn rates. Free plans excluded.
+    formula: >-
+      COUNT(*) WHERE plan IN ('monthly','annual') AND start_date < month_start
+      AND (end_date IS NULL OR end_date >= month_start)
+  - name: paid_churned_subscriptions
+    description: >-
+      Paid subscriptions in the active base at month start whose end_date falls
+      within that month, regardless of status (canceled or expired). Official
+      churn definition unresolved (see unresolved_business_questions).
+    formula: >-
+      COUNT(*) FILTER (WHERE end_date >= month_start AND end_date < month_start + INTERVAL '1 month')
+      over active_paid_at_month_start
+  - name: paid_churned_subscriptions_canceled_only
+    description: >-
+      Paid subscriptions in the active base at month start whose end_date falls
+      within that month and whose status = 'canceled'. Not equivalent to
+      voluntary churn; the reason for cancellation is not in the data.
+    formula: >-
+      COUNT(*) FILTER (WHERE status = 'canceled' AND end_date >= month_start
+      AND end_date < month_start + INTERVAL '1 month') over active_paid_at_month_start
+  - name: monthly_paid_churn_rate
+    description: >-
+      paid_churned_subscriptions / active_paid_at_month_start, as a proportion
+      (multiply by 100 for a percentage).
+    formula: paid_churned_subscriptions / NULLIF(active_paid_at_month_start, 0)
+  - name: monthly_paid_churn_rate_canceled_only
+    description: >-
+      paid_churned_subscriptions_canceled_only / active_paid_at_month_start.
+      Same denominator as the main rate.
+    formula: paid_churned_subscriptions_canceled_only / NULLIF(active_paid_at_month_start, 0)
+
+derived_dimensions:
+  - name: is_paid_plan
+    description: True for monthly and annual plans; free excluded from paid churn.
+    formula: plan IN ('monthly', 'annual')
+  - name: tenure_band
+    description: >-
+      Tenure at the beginning of the analysis period (period_start), i.e. time
+      between start_date and period_start. Exact boundaries - exactly 6 and
+      exactly 12 months fall in the higher band; exactly 24 months stays in the
+      12-24 band.
+        under 6 months:  tenure < 6 months
+        6 to under 12 months: tenure >= 6 and < 12 months
+        12 to 24 months: tenure >= 12 and <= 24 months
+        over 24 months:  tenure > 24 months
+    values: ["under 6 months", "6 to under 12 months", "12 to 24 months", "over 24 months"]
+    formula: |
+      CASE
+        WHEN start_date + INTERVAL '6 months'  >  period_start THEN 'under 6 months'
+        WHEN start_date + INTERVAL '12 months' >  period_start THEN '6 to under 12 months'
+        WHEN start_date + INTERVAL '24 months' >= period_start THEN '12 to 24 months'
+        ELSE 'over 24 months'
+      END
+    note: >-
+      Standard label for the third band is '6 to under 12 months' (6 <= tenure
+      months < 12) in every file. Only valid for subscriptions with start_date < period_start (those in
+      the active base). A tenure of at least x months is tested as
+      start_date + x months <= period_start.
+
+limitations:
+  - No cancellation-request date and no plan-change history exist; end_date is the only ending signal.
+  - Do not treat every non-NULL end_date as a cancellation request, nor assume status = 'canceled' means the request happened on end_date.
+  - Country and device (from users) are signup attributes only.
+  - The 2026-03-01 price-increase date is inferred from payment data, not a confirmed announcement date. end_date is not a cancellation-request date, so churn recorded in March may reflect decisions made earlier.
+  - The official churn definition (all endings vs status = 'canceled') is unresolved; canceled-only is not voluntary churn.
+  - Cutoff 2026-09-24; never include September 2026 in monthly rates.
+
+examples:
+  - question: How many paid subscriptions churned each month in 2026, by the user's country?
+    sql: |
+      WITH months AS (
+        SELECT generate_series(DATE '2026-01-01', DATE '2026-08-01', INTERVAL '1 month')::date AS month_start
+      ),
+      active_at_start AS (
+        SELECT
+          m.month_start,
+          u.country,
+          s.subscription_id,
+          s.end_date,
+          s.status
+        FROM months m
+        JOIN subscriptions s
+          ON s.plan IN ('monthly', 'annual')
+         AND s.start_date < m.month_start
+         AND (s.end_date IS NULL OR s.end_date >= m.month_start)
+        JOIN users u
+          ON u.user_id = s.user_id
+      )
+      SELECT
+        month_start,
+        country,
+        COUNT(*) AS paid_active_at_month_start,
+        COUNT(*) FILTER (
+          WHERE end_date < month_start + INTERVAL '1 month'
+        ) AS churned_subscriptions,
+        ROUND(
+          COUNT(*) FILTER (WHERE end_date < month_start + INTERVAL '1 month')::numeric
+          / NULLIF(COUNT(*), 0),
+          4
+        ) AS monthly_churn_rate,
+        COUNT(*) FILTER (
+          WHERE end_date < month_start + INTERVAL '1 month'
+            AND status = 'canceled'
+        ) AS churned_canceled_only
+      FROM active_at_start
+      GROUP BY month_start, country
+      ORDER BY month_start, country;
+    explanation: >-
+      For each closed month January-August 2026 it takes paid (monthly/annual)
+      subscriptions active at the start of the month, joins users for signup
+      country, and counts those whose end_date falls inside the month. The
+      rate divides by the start-of-month base. churned_canceled_only is shown
+      alongside because the official churn definition is unresolved (it is not
+      a measure of voluntary churn). Subscriptions that ended before the month
+      start, including expired ones, are excluded from the base. September is excluded as incomplete. Useful for comparing
+      retention across markets. Not yet executed against the database.

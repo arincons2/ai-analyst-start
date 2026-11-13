@@ -1,0 +1,283 @@
+"schema_name","table_name","object_type","ordinal_position","column_name","data_type","is_nullable","column_default","column_description","table_description"
+marts,user_activity_metrics,table,1,date,date,NO,,Calendar date associated with the metric. Each row represents one day of activity.,"Aggregated user engagement metrics showing daily active users (DAU), weekly active users (WAU),
+ and monthly active users (MAU) since 2025. These metrics are derived from distinct users with at least one
+ recorded session within the relevant time window. This table is intended for tracking usage trends,
+ measuring stickiness, and supporting product analytics dashboards."
+marts,user_activity_metrics,table,2,dau,integer,NO,,Daily Active Users: number of distinct users who had at least one session on this exact date.,"Aggregated user engagement metrics showing daily active users (DAU), weekly active users (WAU),
+ and monthly active users (MAU) since 2025. These metrics are derived from distinct users with at least one
+ recorded session within the relevant time window. This table is intended for tracking usage trends,
+ measuring stickiness, and supporting product analytics dashboards."
+marts,user_activity_metrics,table,3,wau,integer,NO,,"Weekly Active Users: number of distinct users who had at least one session within the 7-day period ending on this date.
+ Used to measure medium-term engagement trends.","Aggregated user engagement metrics showing daily active users (DAU), weekly active users (WAU),
+ and monthly active users (MAU) since 2025. These metrics are derived from distinct users with at least one
+ recorded session within the relevant time window. This table is intended for tracking usage trends,
+ measuring stickiness, and supporting product analytics dashboards."
+marts,user_activity_metrics,table,4,mau,integer,NO,,"Monthly Active Users: number of distinct users who had at least one session within the 30-day period ending on this date.
+ A core product metric used to track long-term engagement and calculate DAU/MAU stickiness ratios.","Aggregated user engagement metrics showing daily active users (DAU), weekly active users (WAU),
+ and monthly active users (MAU) since 2025. These metrics are derived from distinct users with at least one
+ recorded session within the relevant time window. This table is intended for tracking usage trends,
+ measuring stickiness, and supporting product analytics dashboards."
+marts,user_revenue_summary,table,1,user_id,integer,YES,,,
+marts,user_revenue_summary,table,2,country,character varying(255),YES,,,
+marts,user_revenue_summary,table,3,signup_date,timestamp without time zone,YES,,,
+marts,user_revenue_summary,table,4,plan,character varying(255),YES,,,
+marts,user_revenue_summary,table,5,total_payments,bigint,YES,,,
+marts,user_revenue_summary,table,6,total_revenue_usd,numeric,YES,,,
+marts,user_revenue_summary,table,7,last_payment_date,timestamp without time zone,YES,,,
+ml,churn_snapshot,table,1,user_id,integer,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,2,snapshot_date,date,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,3,plan,character varying(255),NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,4,country,character varying(255),NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,5,device_type,character varying(255),NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,6,tenure_days,integer,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,7,subscription_age_days,integer,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,8,sessions_last_30d,bigint,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,9,sessions_last_90d,bigint,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,10,avg_session_minutes_90d,numeric,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,11,listen_share_90d,numeric,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,12,days_since_last_session,integer,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,13,total_payments,bigint,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,14,last_payment_amount,numeric,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot,table,15,churned_within_90d,integer,NO,,,"ML-ready churn training snapshots for the ML in Production Bootcamp,
+versioned by snapshot_date (append-only; existing snapshots are immutable).
+One row per user with an active paid subscription on the snapshot date.
+Features are computed from activity strictly on or before the snapshot date;
+churned_within_90d indicates whether the subscription ended within the
+following 90 days. Read the newest snapshot via ml.churn_snapshot_latest.
+Built by fpds-dataset/ml_churn_snapshot.sql."
+ml,churn_snapshot_latest,view,1,user_id,integer,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,2,snapshot_date,date,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,3,plan,character varying(255),YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,4,country,character varying(255),YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,5,device_type,character varying(255),YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,6,tenure_days,integer,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,7,subscription_age_days,integer,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,8,sessions_last_30d,bigint,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,9,sessions_last_90d,bigint,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,10,avg_session_minutes_90d,numeric,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,11,listen_share_90d,numeric,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,12,days_since_last_session,integer,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,13,total_payments,bigint,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,14,last_payment_amount,numeric,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,churn_snapshot_latest,view,15,churned_within_90d,integer,YES,,,"The most recent churn training snapshot. Pull from this view once, then save
+the extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot,table,1,trial_id,integer,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,2,user_id,integer,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,3,snapshot_date,date,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,4,trial_started_at,date,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,5,country,character varying(255),NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,6,device_type,character varying(255),NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,7,sessions_day1,bigint,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,8,sessions_day2,bigint,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,9,sessions_day3,bigint,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,10,listen_sessions_3d,bigint,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,11,total_minutes_3d,bigint,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot,table,12,converted,integer,NO,,,"Trial-to-paid conversion training snapshots, versioned by snapshot_date
+(append-only; existing snapshots are immutable). One row per trial fully
+matured by the snapshot date. Columns are base aggregates from the trial's
+first 3 days as materialized by data engineering; feature derivation is left
+to consumers. converted = auto-converted to a paid plan at trial end (1) vs
+canceled during the trial (0). Built by fpds-dataset/ml_trial_snapshot.sql."
+ml,trial_snapshot_latest,view,1,trial_id,integer,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,2,user_id,integer,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,3,snapshot_date,date,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,4,trial_started_at,date,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,5,country,character varying(255),YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,6,device_type,character varying(255),YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,7,sessions_day1,bigint,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,8,sessions_day2,bigint,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,9,sessions_day3,bigint,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,10,listen_sessions_3d,bigint,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,11,total_minutes_3d,bigint,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+ml,trial_snapshot_latest,view,12,converted,integer,YES,,,"The most recent trial-conversion training snapshot. Pull once, save the
+extract as a file in your project; do not depend on the live table."
+public,payments,table,1,payment_id,integer,NO,nextval('payments_payment_id_seq'::regclass),Unique identifier for the payment.,Logs all payment transactions for subscriptions.
+public,payments,table,2,subscription_id,integer,NO,,Foreign key linking to the subscriptions table.,Logs all payment transactions for subscriptions.
+public,payments,table,3,payment_date,timestamp without time zone,NO,,Date when the payment was made.,Logs all payment transactions for subscriptions.
+public,payments,table,4,amount_usd,"numeric(10,2)",NO,,The payment amount in USD.,Logs all payment transactions for subscriptions.
+public,payments,table,5,method,character varying(255),NO,,"The payment method used (e.g., card, paypal).",Logs all payment transactions for subscriptions.
+public,sessions,table,1,session_id,integer,NO,nextval('sessions_session_id_seq'::regclass),Unique identifier for the session.,Records user activity sessions.
+public,sessions,table,2,user_id,integer,NO,,Foreign key linking to the users table.,Records user activity sessions.
+public,sessions,table,3,session_date,timestamp without time zone,NO,,Date and time when the session occurred.,Records user activity sessions.
+public,sessions,table,4,duration_minutes,integer,NO,,Duration of the session in minutes.,Records user activity sessions.
+public,sessions,table,5,activity_type,character varying(255),NO,,"The main activity performed during the session (e.g., browse, listen, read).",Records user activity sessions.
+public,subscriptions,table,1,subscription_id,integer,NO,nextval('subscriptions_subscription_id_seq'::regclass),Unique identifier for the subscription.,Tracks user subscriptions to different plans.
+public,subscriptions,table,2,user_id,integer,NO,,Foreign key linking to the users table.,Tracks user subscriptions to different plans.
+public,subscriptions,table,3,plan,character varying(255),NO,,"The subscription plan (e.g., free, monthly, annual).",Tracks user subscriptions to different plans.
+public,subscriptions,table,4,start_date,timestamp without time zone,NO,,Date when the subscription started.,Tracks user subscriptions to different plans.
+public,subscriptions,table,5,end_date,timestamp without time zone,YES,,Date when the subscription ended (if applicable).,Tracks user subscriptions to different plans.
+public,subscriptions,table,6,status,character varying(255),NO,,"Current status of the subscription (e.g., active, canceled, expired).",Tracks user subscriptions to different plans.
+public,trials,table,1,trial_id,integer,NO,,,"14-day full-access trials, launched 2026-08-01 (see the trial-mechanic proposal). Auto-converts to paid at ends_at unless canceled. outcome is converted, canceled, or NULL while the trial is still active."
+public,trials,table,2,user_id,integer,NO,,,"14-day full-access trials, launched 2026-08-01 (see the trial-mechanic proposal). Auto-converts to paid at ends_at unless canceled. outcome is converted, canceled, or NULL while the trial is still active."
+public,trials,table,3,started_at,timestamp without time zone,NO,,,"14-day full-access trials, launched 2026-08-01 (see the trial-mechanic proposal). Auto-converts to paid at ends_at unless canceled. outcome is converted, canceled, or NULL while the trial is still active."
+public,trials,table,4,ends_at,timestamp without time zone,NO,,,"14-day full-access trials, launched 2026-08-01 (see the trial-mechanic proposal). Auto-converts to paid at ends_at unless canceled. outcome is converted, canceled, or NULL while the trial is still active."
+public,trials,table,5,outcome,character varying(255),YES,,,"14-day full-access trials, launched 2026-08-01 (see the trial-mechanic proposal). Auto-converts to paid at ends_at unless canceled. outcome is converted, canceled, or NULL while the trial is still active."
+public,trials,table,6,outcome_at,timestamp without time zone,YES,,,"14-day full-access trials, launched 2026-08-01 (see the trial-mechanic proposal). Auto-converts to paid at ends_at unless canceled. outcome is converted, canceled, or NULL while the trial is still active."
+public,users,table,1,user_id,integer,NO,nextval('users_user_id_seq'::regclass),Unique identifier for the user.,Stores information about individual users.
+public,users,table,2,signup_date,timestamp without time zone,NO,,Date and time when the user signed up.,Stores information about individual users.
+public,users,table,3,country,character varying(255),NO,,"User's country, based on IP geolocation during signup.",Stores information about individual users.
+public,users,table,4,device_type,character varying(255),NO,,"The type of device used for signing up (e.g., iOS, Android, Web).",Stores information about individual users.

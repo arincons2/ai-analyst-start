@@ -1,0 +1,143 @@
+table: trials
+schema: public
+description: >-
+  14-day full-access trials, launched 2026-08-01. A trial auto-converts to paid
+  at ends_at unless canceled. outcome is converted, canceled, or NULL while the
+  trial is still active.
+grain: One row per trial; each user appears only once (trial_id and user_id are both unique).
+primary_key: trial_id
+row_count_observed: 2073   # observation from database investigation
+
+# Note: the schema export has empty column descriptions for this table. The
+# field descriptions below are derived only from the table-level description
+# and verified findings; no further business rules are asserted.
+fields:
+  - name: trial_id
+    data_type: integer
+    nullable: false
+    role: entity
+    description: Identifier of the trial (primary key; unique).
+  - name: user_id
+    data_type: integer
+    nullable: false
+    role: relationship
+    description: User who has the trial; references users.user_id. Each user appears once.
+  - name: started_at
+    data_type: timestamp without time zone
+    nullable: false
+    role: dimension
+    description: Timestamp when the trial started. Trials launched on 2026-08-01.
+  - name: ends_at
+    data_type: timestamp without time zone
+    nullable: false
+    role: dimension
+    description: Timestamp when the 14-day trial ends; the trial auto-converts to paid at this time unless canceled.
+  - name: outcome
+    data_type: character varying(255)
+    nullable: true
+    role: dimension
+    description: Trial result. One of converted, canceled, or NULL while the trial is still active.
+  - name: outcome_at
+    data_type: timestamp without time zone
+    nullable: true
+    role: dimension
+    description: >-
+      Timestamp associated with the outcome. Nullable. Observed on the live
+      database: NULL exactly when outcome is NULL (418 rows) and populated
+      otherwise (1,655 rows). Observed pattern, not a guaranteed rule.
+
+data_coverage:   # same cutoff documented in all five files
+  data_cutoff: "2026-09-24"
+  cutoff_rule: >-
+    Project default: apply the common cutoff 2026-09-24 to every table, i.e. keep only rows dated
+    before 2026-09-25 00:00 (< TIMESTAMP '2026-09-25'). State the cutoff in answers. If a user
+    explicitly asks for records after 2026-09-24, explain that they fall outside the common
+    project cutoff and ask for confirmation before using them. September 2026 is an incomplete
+    month and is excluded from comparisons of complete calendar months.
+  incomplete_month: "September 2026 is incomplete (data ends 2026-09-24); exclude it from closed-month comparisons."
+  note: "Trials launched 2026-08-01; September 2026 is incomplete and recent trials may still be active."
+
+relationships:
+  - name: trials_to_users
+    type: many_to_one   # user_id is unique in trials, so each user has at most one trial
+    from: trials.user_id
+    to: users.user_id
+    note: "Verified - every trial references an existing user (no orphans)."
+  - name: trials_to_subscriptions
+    type: not_established
+    note: >-
+      The available schema does not establish any link between trials and
+      subscriptions (no shared key other than user_id, and no verified rule
+      that a converted trial produces a subscription row). Do not assume one.
+
+measures:
+  - name: trial_count
+    description: Number of trials started.
+    formula: COUNT(trial_id)
+  - name: converted_trials
+    description: Trials with outcome = 'converted'.
+    formula: COUNT(*) FILTER (WHERE outcome = 'converted')
+  - name: canceled_trials
+    description: Trials with outcome = 'canceled'.
+    formula: COUNT(*) FILTER (WHERE outcome = 'canceled')
+  - name: active_trials
+    description: Trials with no outcome yet (still active).
+    formula: COUNT(*) FILTER (WHERE outcome IS NULL)
+  - name: conversion_rate
+    description: >-
+      Share of trials with a resolved outcome that converted. Active trials
+      (outcome IS NULL) are excluded from the denominator so they are not
+      counted as non-conversions.
+    formula: converted_trials / NULLIF(converted_trials + canceled_trials, 0)
+
+derived_dimensions:
+  - name: trial_start_month
+    description: Calendar month in which the trial started.
+    formula: DATE_TRUNC('month', started_at)::date
+
+unresolved:
+  - id: outcome_at_null_pattern
+    status: OBSERVED PATTERN on the live database; NOT a guaranteed business rule
+    observed_live: >-
+      2,073 trials. outcome_at NULL: 418, all with outcome NULL. outcome_at
+      NOT NULL: 1,655 (827 canceled, 828 converted). No outcome_at is before
+      started_at or after ends_at. So outcome_at is NULL exactly when outcome
+      is NULL, i.e. while the trial has no recorded outcome. No database
+      constraint or business rule guaranteeing this has been established.
+  - id: trial_to_paid_conversion_across_tables
+    status: UNRESOLVED
+    note: >-
+      No schema relationship or authoritative documentation links trials to
+      subscriptions. Matching user_id values does NOT establish a relationship.
+      Do not calculate official trial-to-paid conversion across the two tables.
+      Exploratory matching of users and dates is allowed only if clearly labelled
+      'exploratory' with no official claim. The within-table conversion rate
+      (trials.outcome) is a trials-only figure.
+
+limitations:
+  - Trials only exist from 2026-08-01, so few monthly cohorts exist and the latest cohorts may still contain active trials.
+  - The cohort-level conversion rate is only complete once all trials in the cohort have an outcome.
+
+examples:
+  - question: What are the trial outcomes and the conversion rate by month of trial start?
+    sql: |
+      SELECT
+        DATE_TRUNC('month', started_at)::date                         AS trial_start_month,
+        COUNT(*)                                                      AS trials_started,
+        COUNT(*) FILTER (WHERE outcome = 'converted')                 AS converted,
+        COUNT(*) FILTER (WHERE outcome = 'canceled')                  AS canceled,
+        COUNT(*) FILTER (WHERE outcome IS NULL)                       AS still_active,
+        ROUND(
+          COUNT(*) FILTER (WHERE outcome = 'converted')::numeric
+          / NULLIF(COUNT(*) FILTER (WHERE outcome IN ('converted', 'canceled')), 0),
+          4
+        )                                                             AS conversion_rate_resolved
+      FROM trials
+      WHERE started_at < TIMESTAMP '2026-09-25'   -- common data cutoff (2026-09-24)
+      GROUP BY 1
+      ORDER BY 1;
+    explanation: >-
+      Counts trial outcomes per start month and computes conversion among
+      resolved trials only, keeping still-active trials visible but out of the
+      rate. Useful for monitoring the new trial mechanic. The latest month
+      (September 2026) is incomplete.
