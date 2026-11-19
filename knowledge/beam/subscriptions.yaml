@@ -289,6 +289,7 @@ limitations:
   - The 2026-03-01 price-increase date is inferred from payment data, not a confirmed announcement date. end_date is not a cancellation-request date, so churn recorded in March may reflect decisions made earlier.
   - The official churn definition (all endings vs status = 'canceled') is unresolved; canceled-only is not voluntary churn.
   - Cutoff 2026-09-24; never include September 2026 in monthly rates.
+  - Future start dates (as recorded in quirks.md, not re-queried): a few subscriptions have a start_date after the analysis date. They are scheduled starts, mostly trials that will convert when they mature. Exclude rows that start after the cutoff from any count of what has happened.
 
 examples:
   - question: How many paid subscriptions churned each month in 2026, by the user's country?

@@ -77,6 +77,8 @@ derived_dimensions:
 limitations:
   - The latest signup month (September 2026) is incomplete.
   - Country and device_type are signup attributes; the schema stores no history of changes.
+  - Observed on the live database (profiled 2026-11-13): for all 2,073 users who have a trial, signup_date falls on the same calendar date as trials.started_at.
+  - The September 2025 signup spike (see quirks.md) sits in this table. As recorded in quirks.md (not re-queried): signups that month are roughly five times a normal month, with a matching jump in the active base and in monthly actives, and the daily-to-monthly active ratio falls from about 0.25 to about 0.21. Treat it as a known anomaly and name it whenever it enters a comparison.
 
 examples:
   - question: How many new users registered each month, by country?

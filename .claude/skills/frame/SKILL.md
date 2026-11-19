@@ -37,7 +37,7 @@ Keep the user's meaning. Tidy the wording if you must, but never change what is 
 These hold in every act.
 
 - **Ask with AskUserQuestion, one focused question at a time.** There is no limit on how many questions you ask. The options you offer are prompts: the answer counts only when the user picks or types it. Never mark an option as recommended, and never treat silence as an answer.
-- **Never invent, infer, reconstruct or assume** the question, the decision or the audience, from the question, the data files, the project notes or anything else. Restating your reading of the question and asking the user to confirm it is allowed. Using it without confirmation is not.
+- **Never invent, infer, reconstruct or assume** the question, the decision or the audience, from the question, the data files, the YAML, `quirks.md` or anything else. Restating your reading of the question and asking the user to confirm it is allowed. Using it without confirmation is not.
 - **Relative dates are read against 2026-09-24**, the last day of Beam's data, never against the real date. "Today" is 2026-09-24. If a date is still ambiguous, ask. September 2026 is an open month on that date, so "last month" or "this month" must be settled with the user, never resolved silently.
 - **No em dashes** in `frame.md` or on the CLI.
 
@@ -71,9 +71,9 @@ A question is sufficiently clear when the analyst could answer it correctly in t
 You identify the tables yourself. Never ask the user to name them.
 
 1. List the files in `data/` with Glob (`data/*.csv`). Listing names is all you do there. Never open a CSV, never read its headers, never read its contents.
-2. Read `knowledge/beam/quirks.md` and `knowledge/beam/corrections.md`. Read every `knowledge/beam/<table>.md` that exists for a table you are considering.
-3. From the question, the file names and those notes, choose the tables likely needed to answer the question. For each, write a short reason. Use the notes and quirks only to choose and to explain the choice; do not draw findings from them.
-4. Use the CSV file name without its extension as the table name (`trials`, `users`). That name maps to `data/<name>.csv` and to `knowledge/beam/<name>.md`, which is how the profile skill finds it.
+2. Read `knowledge/beam/quirks.md` and `knowledge/beam/corrections.md`. Read `knowledge/beam/<table>.yaml` for each table you are considering, using its `description`, `grain` and `relationships`.
+3. From the question, the file names, the YAML and those files, choose the tables likely needed to answer the question. For each, write a short reason. Use the YAML, the quirks and the corrections only to choose and to explain the choice; do not draw findings from them.
+4. Use the CSV file name without its extension as the table name (`trials`, `users`). That name maps to `data/<name>.csv` and to `knowledge/beam/<name>.yaml`, which is how the profile skill finds it.
 5. Every table you list must be a file you saw in `data/`. Never list one you did not see. If no file plausibly fits the question, say so and ask the user how to proceed; do not write the note with a made-up list.
 
 ## Act 5: Create the run folder and write the note
@@ -135,6 +135,17 @@ Report success only if all of these are true. If any one is not, say which one a
 
 When the user corrects you, append one dated line to `knowledge/beam/corrections.md` and continue. Get the date with `date +%F`. Append nothing when there is no correction. Never edit any other file in `knowledge/beam/`, and never rewrite earlier lines of `corrections.md`.
 
+## Proposing changes to the semantic layer
+
+When you find something that requires updating, correcting, clarifying or adding to the semantic layer (a table's YAML in `knowledge/beam/`), do not edit the YAML. Propose the change to the user instead. Each proposal gives:
+
+1. **File:** `knowledge/beam/<table>.yaml`
+2. **Field or section:** the key path, for example `limitations` or `fields[outcome].description`
+3. **Proposed change:** the current value (or "absent") and a ready-to-paste replacement or addition
+4. **Reason:** the evidence behind it, with "(inferred)" on anything not confirmed
+
+Number the proposals and show them on the CLI after the report below, as a separate list. They never go into `frame.md`, whose structure stays fixed. Apply none without the user's explicit approval.
+
 ## Deliver
 
 The note is the deliverable. On the CLI, after the gate passes, show only these lines, one per element:
@@ -155,7 +166,7 @@ Acts 1 to 6 are also what another skill follows when it must create a missing fr
 
 - **The question is the gate.** No clear question, no frame. Ask; never guess.
 - **The user names the decision and who decides.** You may ask for them. You may not supply them.
-- **Name the tables, do not read them.** File names and project notes are enough to frame. Profile looks at the data.
+- **Name the tables, do not read them.** File names and the YAML are enough to frame. Profile looks at the data.
 - **Ask only what the answer depends on.** A question for every conceivable detail is as unhelpful as none.
 - **Dates have two jobs.** The system date names the folder. 2026-09-24 reads the data.
 - **Never overwrite.** A new run gets a new folder; every old run stays as it was.

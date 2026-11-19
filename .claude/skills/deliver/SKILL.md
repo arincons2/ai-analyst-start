@@ -59,7 +59,7 @@ These hold in every step.
 1. Read `review.md` in full: the verdict, the Verified and Problem lines under MECHANICS and REASONING, every finding with its change type, and UNVERIFIED CHECKS.
 2. Read each result table in `data/`. List the charts with Glob (`charts/*.png`) and look at each one with Read, so a chart's heading says what it really shows.
 3. Read `analysis.py` only to see which code produced each table, and which filters and comparisons it uses. Do not run it.
-4. Read `knowledge/beam/quirks.md` and `knowledge/beam/corrections.md`, so a quirk that touches a number is named next to it. For example, say so when the September 2025 spike is inside a comparison or the March 2026 price change affects monthly payments.
+4. Read `knowledge/beam/quirks.md`, `knowledge/beam/corrections.md` and the `knowledge/beam/<table>.yaml` of each table in the frame, so a quirk, business rule or limitation that touches a number is named next to it. For example, say so when the September 2025 spike is inside a comparison or the March 2026 price change affects monthly payments.
 5. Use only these files. The headline numbers and check summaries `analyse` printed on the CLI were not saved, so you cannot use them.
 
 ## Step 4: Decide what the brief says
@@ -100,6 +100,8 @@ Source: `data/<name>.csv`, <the filter>, `analysis.py`.
 ### Not verified
 - <Every finding and unverified check carried over from the review, and what
   the analysis did not cover.>
+### Proposed YAML changes
+1. <File `knowledge/beam/<table>.yaml`; field or section; proposed change; reason.>
 ```
 
 Rules for each section:
@@ -111,6 +113,7 @@ Rules for each section:
 - **Checks.** This section must not suggest a check was done unless there is evidence. You verified nothing yourself, so "Verified" lists only what `review.md` marks as Verified, and says it comes from the review. Start the section with the verdict in one line. Then:
   - After **Ship it**: nothing is carried as a finding. Still list the review's UNVERIFIED CHECKS and the limits it named.
   - After **Think on it**: for each finding labelled Small change, say the review recommended it, that the analyst applied it afterwards, and that the change was not reviewed again. Put every other finding, and each of the review's UNVERIFIED CHECKS, under "Not verified" as not verified, with the finding's own words on why it matters.
+  - **Proposed YAML changes** is optional. When something requires updating, correcting, clarifying or adding to the semantic layer, carry over every proposal from the `PROPOSED YAML CHANGES` section of `review.md` and add any new one you found. Each gives the file, the field or section, the proposed change and the reason. Never edit the YAML; the proposals are for the user to approve. Omit the subsection when there are none.
   - Always name what the data cannot support: open periods, trials not yet matured, assumptions nobody tested, and any gap the review named.
 
 Keep the whole brief short enough to read in a few minutes. Write plainly. Cut anything the decision does not need.
@@ -122,7 +125,7 @@ Before you finish, read `brief.md` back and confirm:
 1. The question and scope are the frame's, unchanged.
 2. Every number matches a result table, with its comparison and the unit of change named.
 3. Every finding, interpretation and recommendation is labelled as what it is, and no recommendation lacks a reason.
-4. Every finding and unverified check in `review.md` appears in Checks.
+4. Every finding and unverified check in `review.md` appears in Checks, and every proposal in its `PROPOSED YAML CHANGES` section appears under Proposed YAML changes.
 5. Every chart exists in `charts/`, and its heading says what the chart shows.
 6. There are no em dashes and no raw rows.
 

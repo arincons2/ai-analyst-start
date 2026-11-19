@@ -1,6 +1,6 @@
 table: sessions
 schema: public
-description: Records user activity sessions (user activity and duration).
+description: "Records user activity sessions (user activity and duration). Large table (about 4.3 million rows): answer with SQL aggregates from the live PostgreSQL database (through the course-db MCP server) saved in the run folder, and prefer them to individual session records. Never retrieve all rows of this table, to avoid unnecessary data retrieval and context-window use."
 grain: One row per session (session_id is unique).
 primary_key: session_id
 row_count_observed: 4335470   # observation from database investigation
@@ -85,6 +85,16 @@ unresolved:
   - id: official_active_user
     status: UNRESOLVED
     note: No official definition of an active user is documented.
+  - id: trial_user_session_timing
+    status: OBSERVED on the live database (profiled 2026-11-13); explanation not established
+    observed_live: >-
+      For trial users, 9,242 sessions on the trial start date are timestamped
+      earlier than trials.started_at of the same date, so activity on the first
+      calendar day starts before the trial timestamp. Read trial day one by
+      calendar date, not by timestamp comparison. Sessions per day for trial
+      users fall from about 5,200 on day one to about 3,000 by day twelve; day
+      thirteen has only 74 sessions in total, which is unexplained and should
+      not be used.
 
 operational_definitions:   # session-based, NOT official Beam business metrics
   requires_user_acceptance: >-

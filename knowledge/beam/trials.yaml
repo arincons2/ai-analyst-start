@@ -113,10 +113,29 @@ unresolved:
       Exploratory matching of users and dates is allowed only if clearly labelled
       'exploratory' with no official claim. The within-table conversion rate
       (trials.outcome) is a trials-only figure.
+  - id: outcome_timing_pattern
+    status: OBSERVED PATTERN on the live database (profiled 2026-11-13); NOT a guaranteed business rule
+    observed_live: >-
+      ends_at is exactly 14 days after started_at in all 2,073 rows. Every
+      converted outcome has outcome_at equal to ends_at (828 of 828). Canceled
+      outcome_at falls 4 to 13 days after started_at (average 8.41 days), so a
+      cancel is recorded before ends_at and a conversion only at ends_at. 102
+      canceled trials end after the 2026-09-24 cutoff, so their outcome is
+      known before the trial matures. Every trial user's users.signup_date is
+      on the same calendar date as started_at (2,073 of 2,073).
+  - id: exploratory_trial_subscription_match
+    status: EXPLORATORY ONLY; the trials_to_subscriptions relationship stays not_established
+    observed_live: >-
+      Of the 2,073 trial users, 1,655 have a subscription row. All 828
+      converted trials have a monthly or annual subscription starting on the
+      date of ends_at; all 827 canceled trials have a free subscription; the
+      418 open trials have none. Do not present this as official trial-to-paid
+      conversion.
 
 limitations:
   - Trials only exist from 2026-08-01, so few monthly cohorts exist and the latest cohorts may still contain active trials.
   - The cohort-level conversion rate is only complete once all trials in the cohort have an outcome.
+  - A trial has matured when ends_at is before the cutoff (2026-09-25 00:00). Cancels are recorded before ends_at but conversions only at ends_at, so a rate over resolved trials that are still inside their 14 days counts cancels and almost no conversions. Restrict a conversion rate to matured trials.
 
 examples:
   - question: What are the trial outcomes and the conversion rate by month of trial start?

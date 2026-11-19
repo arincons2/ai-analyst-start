@@ -42,7 +42,7 @@ These hold in every step.
    - `frame.md` in the run folder, with all five headings (Question, Decision, Audience, What would change the decision, Tables likely involved), each filled in. `Not provided` counts as filled in for "What would change the decision".
    - At least one result table in the run folder's `data/` folder.
    - `knowledge/beam/quirks.md`.
-3. Also look for `knowledge/beam/corrections.md`, `knowledge/beam/<table>.md` for each table named in the frame, and the source files in `data/`. A missing one does not block the review. Name what it stops you checking under UNVERIFIED CHECKS.
+3. Also look for `knowledge/beam/corrections.md`, `knowledge/beam/<table>.yaml` for each table named in the frame, and the source files in `data/`. A missing one does not block the review. Name what it stops you checking under UNVERIFIED CHECKS.
 4. If a required item is missing, or the folder cannot be found, or the target is a notebook with no `analysis.py`, stop. Do not give a verdict. Write the blocked report (see the format below), say which parts of the review cannot be done, and stop.
 5. Never review from memory or from the analyse step's CLI report. Only the files count.
 
@@ -55,7 +55,7 @@ These hold in every step.
 
 ## Step 3: Review the mechanics
 
-Do this before the reasoning. Read `analysis.py` in full, read each result table, read `quirks.md` and the table notes, then check these five things against evidence.
+Do this before the reasoning. Read `analysis.py` in full, read each result table, read `quirks.md` and the table YAMLs, then check these five things against evidence.
 
 - **Joins.** Find every merge. Does the right side repeat its key? Run `join_fan_out` on the actual keys. Is the join type right, and are unmatched rows dropped without anyone saying so?
 - **Grain.** What is one row at each stage: a user, a subscription, a trial, a payment, a day? Is it the grain the question needs, and is it kept through every join and aggregation?
@@ -141,7 +141,15 @@ FINDINGS
 
 UNVERIFIED CHECKS
 - <each check you could not verify, and why>
+
+PROPOSED YAML CHANGES
+1. File: knowledge/beam/<table>.yaml
+   Field or section: <key path>
+   Proposed change: <current value or "absent", and the ready-to-paste replacement or addition>
+   Reason: <the evidence, with "(inferred)" on anything not confirmed>
 ```
+
+Include PROPOSED YAML CHANGES only when the review found something that requires updating, correcting, clarifying or adding to the semantic layer (a table's YAML in `knowledge/beam/`). Never edit the YAML; the proposals are for the user to approve, and none is applied. Number them. Omit the section when there are none.
 
 Use zero, one, two or three findings. If there are none, write `No material findings.` under FINDINGS. If every check was verified, write `None.` under UNVERIFIED CHECKS.
 
@@ -164,6 +172,7 @@ The review is the deliverable. On the CLI, show only:
 - The verdict.
 - One line per finding: its type, a short description and its change type.
 - The path of `review.md`, or for a blocked review where no folder exists, the blocked report in full.
+- If `review.md` has a PROPOSED YAML CHANGES section, one line saying how many proposals it holds.
 
 Keep it under fifteen lines. Do not paste the review into the CLI.
 
@@ -176,4 +185,5 @@ Keep it under fifteen lines. Do not paste the review into the CLI.
 - **Never claim an unverified check passed.** An honest gap beats a false pass.
 - **Material findings first.** Three important findings beat ten trivial ones. Do not invent findings to fill the list.
 - **Independent, critical and fair.** Look hard for what is wrong, and say plainly when something is right.
+- **Propose YAML changes.** What the review learns about the semantic layer goes into PROPOSED YAML CHANGES for the user to approve, never into the YAML itself.
 - **You review, the analyst decides.** Never touch `analysis.py`. Say what to change and how big it is; the analyst implements it.

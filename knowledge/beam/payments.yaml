@@ -118,6 +118,7 @@ limitations:
   - The 2026-03-01 price-increase date is inferred from transaction data; no payment status or refunds exist to rule out other adjustments.
   - The schema has no refund, failure or currency-conversion fields; amounts are treated as recorded.
   - amount_usd values are recorded gross payment amounts. Do not describe totals as net revenue or recurring revenue; refunds and payment statuses are not available.
+  - Payments start on 2025-01-01 (as recorded in quirks.md, not re-queried). Earlier payments are not in the export, so a paid subscription that started before then can have no payment rows (11,122 subscriptions have payments, against 12,513 on a paid plan).
 
 examples:
   - question: What was the total payment amount and number of payments each month, by payment method?

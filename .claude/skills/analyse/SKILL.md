@@ -43,9 +43,9 @@ These hold in every act.
 
 ## Act 2: Load the context
 
-1. Read `knowledge/beam/quirks.md`, `knowledge/beam/corrections.md`, and for each table involved both `knowledge/beam/<table>.md` and `knowledge/beam/<table>.yaml`.
+1. Read `knowledge/beam/quirks.md`, `knowledge/beam/corrections.md`, and for each table involved `knowledge/beam/<table>.yaml`.
 2. The YAML is the semantic layer and is authoritative for business definitions: grain, relationships, measures, filters and the data cutoff. Use its definitions as written and never edit it. Where it marks a definition unresolved (the official churn definition, revenue, MRR, active user, trial-to-paid conversion across `trials` and `subscriptions`), say so and do not present a number as official. A figure on an unresolved definition is labelled as an operational or exploratory measure.
-3. If a table involved has no note, run the profile skill on it first: read `.claude/skills/profile/SKILL.md` and follow it, then come back here.
+3. If a table involved has no `knowledge/beam/<table>.yaml`, stop and ask the user to run the profile skill on it, which proposes the YAML. Do not run Profile yourself and do not go on until the YAML exists.
 4. Say in one line which quirks apply to this question, which YAML definitions you will use, and which corrections, if any.
 5. For each join the question needs, write down the expected cardinality from the YAML relationships (`payments_to_subscriptions` and `subscriptions_to_users` are many to one, `users_to_subscriptions` and `users_to_trials` are zero or one, `subscriptions_to_payments` and `users_to_sessions` are zero or many, `payments_to_users` is indirect through `subscriptions`). A relationship the YAML marks `not_established`, such as `trials` to `subscriptions`, cannot be used as an official join. Never assume a cardinality the YAML does not state.
 6. For trial conversion questions, the official measure is the YAML `conversion_rate`: converted over converted plus canceled, so trials with no outcome yet are out of the denominator. You also compute a sensitivity comparison on matured trials only (`ends_at < TIMESTAMP '2026-09-25'`). Never substitute one definition for the other.
@@ -121,7 +121,20 @@ On the CLI, report:
 - What was not checked, including that separate calls do not necessarily share one snapshot, that the saved results are a snapshot of the database at query time, and that MD5 is an accidental-corruption check, not proof of provenance.
 - The path of the run folder.
 
-Keep it under twenty lines. No brief here; the Deliver step writes the brief.
+If the work showed something that requires updating, correcting, clarifying or adding to the semantic layer, list the numbered YAML change proposals after the report, as described in "Proposing changes to the semantic layer" below.
+
+Keep the report under twenty lines. No brief here; the Deliver step writes the brief.
+
+## Proposing changes to the semantic layer
+
+When you find something that requires updating, correcting, clarifying or adding to the semantic layer (a table's YAML in `knowledge/beam/`), do not edit the YAML. Propose the change to the user instead. Each proposal gives:
+
+1. **File:** `knowledge/beam/<table>.yaml`
+2. **Field or section:** the key path, for example `limitations` or `measures.conversion_rate`
+3. **Proposed change:** the current value (or "absent") and a ready-to-paste replacement or addition
+4. **Reason:** the evidence behind it, with "(inferred)" on anything not confirmed
+
+Number the proposals and show them on the CLI. They are not written to any file in the run folder. Apply none without the user's explicit approval.
 
 ## Principles
 
@@ -133,7 +146,7 @@ Keep it under twenty lines. No brief here; the Deliver step writes the brief.
 - **Never silently substitute a definition.** The YAML measure is official; a sensitivity comparison sits beside it and is labelled.
 - **The YAML defines the business terms.** Use its measures as written, and label anything it marks unresolved.
 - **Always compare.** A number without its comparison is not a finding. When there is no comparison, say so.
-- **Quirks first.** Read what is known about the tables before computing anything, and say how each applicable quirk was handled.
+- **Quirks and YAML first.** Read the quirks, the corrections and the table YAMLs before computing anything, and say how each applicable quirk was handled.
 - **Closed periods only.** An open month or an unmatured trial is not a result.
 - **Name the unit of change.** Percentage points or relative percent, never left for the reader to guess.
 - **Rerunnable or it did not happen.** Anyone can run the script again on the saved results and get the same tables, charts and numbers.

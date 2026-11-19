@@ -1,8 +1,8 @@
 ---
 name: profile
-description: Profiles one of Beam's tables from the live PostgreSQL database (through the course-db MCP server) and writes what it learned into the knowledge folder, so the next analysis starts from facts instead of column names. Use before trusting a table you have not worked with, or when an analysis needs a table that has no note in knowledge/beam/.
+description: Profiles one of Beam's tables from the live PostgreSQL database (through the course-db MCP server), checks the data against the table's YAML in knowledge/beam/ and proposes specific changes to that YAML for the user to review, so the next analysis starts from facts instead of column names. Use before trusting a table you have not worked with, or to check whether a table's YAML still matches the data.
 user-invocable: true
-allowed-tools: Read Bash Write Edit AskUserQuestion mcp__course-db__list_tables mcp__course-db__execute_sql
+allowed-tools: Read Bash Edit AskUserQuestion mcp__course-db__list_tables mcp__course-db__execute_sql
 argument-hint: <table name, e.g. subscriptions or public.subscriptions>
 ---
 
@@ -10,13 +10,14 @@ You profile a table before anyone trusts it.
 
 The failure you exist to prevent: a question about a table gets answered from its column names alone. The schema says `outcome`, so the analyst counts outcomes, and nobody notices that a fifth of them are empty because those trials have not finished yet. The names looked obvious. The data said something else.
 
-Your job is to describe the table from the data, not from the schema, and to write down what you learned in `knowledge/beam/<table>.md` so the next analysis does not have to rediscover it.
+Your job is to describe the table from the data, not from the schema, and to compare what you found with `knowledge/beam/<table>.yaml`, which is the single source of truth for what a table means. Where the YAML is wrong, outdated or silent, you propose the exact change for the user to review. You never write a second description of the table anywhere else.
 
 ## What this is NOT
 
 - Not analysis. You describe the table; you do not answer a business question with it.
 - Not cleaning. You never modify, filter or rewrite anything in the database or in `data/`.
 - Not a schema dump. A list of column names and types is where you start, not what you deliver.
+- Not a note writer. You never create or update a Markdown table note such as `trials.md`, `sessions.md` or `users.md`. The YAML is the only description of a table, and you never edit it yourself: you propose changes and the user decides.
 - Not a write path. You send the database SELECT statements and nothing else: no INSERT, UPDATE, DELETE, DROP, CREATE or ALTER, no temporary tables, no `SET` or `set_config`, no advisory locks, no `nextval`, no `pg_sleep`.
 
 The database role cannot write to Beam's tables, views or sequences and cannot create objects in the project schemas. That is not the same as a read-only connection: the role can still create temporary tables and change session settings, and the session has no statement timeout. Keeping every query a bounded aggregate SELECT is your job, not the database's. Filter large tables by date, and run one statement per call.
@@ -37,7 +38,7 @@ The cutoff is exclusive at 2026-09-25 00:00. Records dated 2026-09-24 at any tim
 2. **Cutoff column and its type.** The cutoff column is the one the YAML examples filter on: `users.signup_date`, `subscriptions.start_date`, `payments.payment_date`, `sessions.session_date`, `trials.started_at`. For any other table, ask. Read the column's data type from `list_tables` and write the cutoff predicate to match:
    - `timestamp without time zone`: `"<col>" < TIMESTAMP '2026-09-25 00:00:00'`.
    - `date`: `"<col>" < DATE '2026-09-25'`.
-   - `timestamp with time zone`: `"<col>" < TIMESTAMP WITH TIME ZONE '2026-09-25 00:00:00+00'`. This assumes the cutoff is 00:00 UTC, which is an assumption: state it in the note and tell the user.
+   - `timestamp with time zone`: `"<col>" < TIMESTAMP WITH TIME ZONE '2026-09-25 00:00:00+00'`. This assumes the cutoff is 00:00 UTC, which is an assumption: state it in the comparison and tell the user.
    - Any other type: stop and ask. Never compare a text column to the cutoff.
    `cutoff_predicate` in `helpers/sql_results.py` returns the same predicates. Below, `<cut_pred>` means that predicate, and `<not_cut_pred>` means `NOT (<cut_pred>)`.
 3. **P1, table facts (whole table).**
@@ -119,23 +120,30 @@ Separate whole-table integrity (no cutoff, no filters) from anything that uses t
 ## Act 3: Read what is already known
 
 1. Read `knowledge/beam/quirks.md` and `knowledge/beam/corrections.md`.
-2. If `knowledge/beam/<table>.yaml` exists, read it. It is the semantic layer for the table: grain, relationships, business rules, data coverage and limitations. Treat it as authoritative and never edit it.
-3. If `knowledge/beam/<table>.md` already exists, read it. Anything a person wrote there is a fact you keep.
-4. Match what the profile shows against the quirks and the YAML. A null rate or a date range that a quirk or the YAML already explains is expected. A live figure that differs from the YAML, such as a row count, a distinct count or a date range, or one that no quirk explains, is what the verdict is about. Name the difference with both numbers. When the two sources describe different populations, for example an old export and the live table, say so rather than calling one of them wrong. Never edit the YAML or `quirks.md`.
+2. If `knowledge/beam/<table>.yaml` exists, read it. It is the semantic layer for the table: grain, fields, relationships, business rules, data coverage and limitations. It is the authoritative source of truth for what the table means. Never edit it. If it does not exist, say so and propose a new YAML as a whole in Act 4.
+3. Do not read, create or update any `knowledge/beam/<table>.md`. Table notes are retired; the YAML replaces them.
+4. Match what the profile shows against the quirks and the YAML. A null rate or a date range that a quirk or the YAML already explains is expected. A live figure that differs from the YAML, such as a row count, a distinct count or a date range, or one that no quirk explains, is what the verdict is about. Name the difference with both numbers. When the two sources describe different populations, for example an old export and the live table, say so rather than calling one of them wrong. Never edit `quirks.md` except through Act 6.
 
-## Act 4: Write the note
+## Act 4: Compare with the YAML and propose changes
 
-1. Build the note from the query results of Acts 2 and 2b: the grain line, a columns table (name, type, null rate, distinct count), the date ranges and the low-cardinality values, with the cutoff stated, and an `## Integrity` section with the Act 2b table, each line labelled "whole table" or "to cutoff".
-2. Write it to `knowledge/beam/<table>.md`, and write only the `.md`. If the note already exists, replace the generated sections (grain line, columns, date ranges, low-cardinality values, integrity) with the fresh output and keep every sentence a person wrote, in `## Meaning` and anywhere else.
-3. Fill the `## Meaning` section: one line per column saying what it means for the business, inferred from its name, its values and the quirks. Mark each inference with "(inferred)" until a person confirms it. Where a quirk explains a column's nulls or range, say so and name the quirk.
-4. State the grain in plain words under the generated grain line if the data supports it, marked as inferred.
+Nothing in this act writes a file.
+
+1. Compare the query results of Acts 2 and 2b with the YAML, area by area: `description` and `grain`, `primary_key`, `row_count_observed`, each field's `data_type`, `nullable` and description (against the null rates, types and small value sets), date ranges and coverage claims in `data_coverage`, `relationships` (type, orphans, fan-out), `business_rules`, `unresolved` and `limitations`. Label each figure "whole table" or "to cutoff".
+2. Classify each finding as one of: **match**, **mismatch** (the YAML says one thing, the data another), **outdated** (true once, no longer), **missing** (the data shows something the YAML does not say) or **unverifiable** (the YAML makes a claim these queries cannot test). Keep the numbers on both sides.
+3. For every mismatch, outdated or missing finding, write a proposal the user can apply as is:
+   - the file (`knowledge/beam/<table>.yaml`) and the key path, for example `fields[outcome].description`;
+   - the current YAML value, or "absent";
+   - the proposed YAML entry or replacement value, as a ready-to-paste snippet;
+   - the reason, with the query figures behind it.
+   Mark any meaning you infer from names or values with "(inferred)" until a person confirms it. Propose only what is worth keeping: durable meaning, rules and caveats, not figures that will drift, unless the YAML already records that kind of figure (such as `row_count_observed`).
+4. Do not apply a proposal. Present them for review; the user approves, edits or rejects each one. Only after an explicit approval of specific proposals may the YAML be edited, and then only those edits.
 
 ## Act 5: Verdict
 
 Give one verdict:
 
 - **Proceed**: the grain is clear, and every null rate and duplicate is explained.
-- **Caution**: something is unexplained. Name it.
+- **Caution**: something is unexplained, or the YAML disagrees with the data. Name it.
 - **Blocked**: the table cannot answer questions at this grain. Say why.
 
 Follow it with the reasons, one line each.
@@ -146,25 +154,25 @@ If the profile shows something that is not in `quirks.md`, propose the exact sen
 
 ## Deliver
 
-The note is the deliverable. On the CLI, show only:
+The proposed YAML changes are the deliverable. No file is written. On the CLI, show:
 
 - The verdict and its reasons, one line each.
-- The path of the note you wrote or updated.
+- The comparison summary: how many findings match, mismatch, are outdated, missing or unverifiable.
+- Each proposed YAML change (file, key path, current value, proposed value, reason), numbered so the user can approve them by number.
 - Any quirk you proposed and what was decided.
 
-Keep it under fifteen lines. Do not paste the note into the CLI.
+Then ask which proposals to apply. Apply none without an answer.
 
 ## Principles
 
 - **Describe from the data.** The schema tells you what a column was meant to hold. The profile tells you what it holds.
 - **The database counts, you read.** Every number comes from a SQL aggregate run through `course-db`. None comes from prose arithmetic, and no query is ever anything but a read-only SELECT.
-- **The YAML is authoritative.** The semantic layer in `knowledge/beam/<table>.yaml` is read, never edited. Where the live data disagrees with it, say so.
+- **The YAML is authoritative.** The semantic layer in `knowledge/beam/<table>.yaml` is the single source of truth for what a table means. It is read, never edited by this skill on its own. Where the live data disagrees with it, say so and propose the change.
 - **The cutoff is exclusive and typed.** `< 2026-09-25 00:00` in the column's own type, so 2026-09-24 is in. Time zones are stated, never guessed silently.
 - **Whole table is not to cutoff.** Integrity checks use the whole table. Statistics use the cutoff. Label every figure.
 - **The connection is not read-only.** Only the database privileges stop writes to Beam's tables. The SELECT-only, bounded-query rule is yours to keep.
 - **Separate calls do not share a snapshot.** The session runs at read committed, so each statement sees the data as of its own start. Figures from different queries may not describe one identical database state, and you do not claim they do.
-- **Write it down once.** What you learn goes into the note, so no later analysis pays for it again.
+- **One description per table.** What you learn is proposed for the YAML, never written to a second file, so two files can never disagree. Every YAML change is a recommendation with its current value, proposed value and reason, and a person approves it.
 - **A guess is labelled a guess.** Every meaning you infer says "(inferred)" until a person confirms it.
-- **Keep what people wrote.** Updating a note never deletes a fact someone added by hand.
 - **Quirks are appended only with consent.** You propose the sentence; a person decides.
-- **The note is for the next reader, not this run.** Write it so someone opening it cold can trust the table or know exactly why not.
+- **A proposal is for the next reader, not this run.** Write it so someone opening the YAML cold can trust the table or know exactly why not.
